@@ -4951,8 +4951,10 @@ MonoBehaviour:
   oneAbilityDialogues:
   - name: Alchemist
     sentences:
-    - "\u201CAh, my Silver Moonstone, good! "
-    - "One more artifact remains.\u201D\r\n"
+    - 'Ah, my Lodestone shard, good! '
+    - 'One more artifact remains.
+
+'
   - name: Alchemist
     sentences:
     - "\u201CDo not delay.\u201D\r\n"
@@ -9288,7 +9290,7 @@ MonoBehaviour:
   dialogue:
     name: Alchemist
     sentences:
-    - "At last, my Lodestone\u2019s missing shard.\r"
+    - "At last, my Silver Moonstone.\r"
     - "Now that you\u2019ve retrieved my artfacts\u2026"
     - "Your sentience is no longer required\r"
     - ' Return to me, my shadow.'
