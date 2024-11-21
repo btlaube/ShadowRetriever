@@ -5161,7 +5161,7 @@ MonoBehaviour:
   oneAbilityDialogues:
   - name: Alchemist
     sentences:
-    - 'Ah, my Lodestone shard, good! '
+    - 'Ah, my Lodestone''s missing shard, good! '
     - 'One more artifact remains.
 
 '
