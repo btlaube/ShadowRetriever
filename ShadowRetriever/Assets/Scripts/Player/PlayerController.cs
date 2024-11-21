@@ -309,7 +309,7 @@ public class GroundedState : PlayerState
         Vector3 input = playerController.GetInput();
 
         // Jump input
-        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow))
+        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W))
         {
             // Ground Jump
             playerController.Jump();
@@ -325,7 +325,7 @@ public class GroundedState : PlayerState
         //         playerController.SwitchState(new WallClingingState(playerController));
         // }
         // drop through one-way platform
-        if (input.y < 0)
+        if (input.y < 0 || Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S))
         {
             // Get collider stood on and disable
             // Find all colliders within the circle
@@ -369,7 +369,7 @@ public class FallingState : PlayerState
         Vector3 input = playerController.GetInput();
 
         // Check Jump
-        if ((Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.DownArrow)) && playerController.currentJumps < playerController.maxJumps)
+        if ((Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W)) && playerController.currentJumps < playerController.maxJumps)
         {
             if (playerController.hasDoubleJump)
                 // Double Jump
@@ -425,7 +425,7 @@ public class WallClingingState : PlayerState
         }
 
         // Jump input
-        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow) && playerController.currentJumps < playerController.maxJumps)
+        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W) && playerController.currentJumps < playerController.maxJumps)
         {
             playerController.WallJump();
         }
