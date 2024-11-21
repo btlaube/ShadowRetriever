@@ -145,7 +145,7 @@ public class PlayerController : MonoBehaviour
 
     public void SetYVelocity(float yVel)
     {
-        yVelocity = yVel;
+        rb.velocity = new Vector2(rb.velocity.x, yVel);
     }
 
     public void ResetJumpDuration()
@@ -242,7 +242,7 @@ public class PlayerController : MonoBehaviour
     public void WallJump()
     {
         
-        rb.velocity = new Vector2(-Mathf.Sign(transform.localScale.x) * jump.x, jump.y);
+        rb.velocity = sr.flipX ? new Vector2(-jump.x, jump.y) : new Vector2(jump.x, jump.y);
         animator.SetBool("IsJumping", true);
         currentJumps++;
     }
@@ -319,10 +319,11 @@ public class GroundedState : PlayerState
         {
             playerController.SwitchState(new FallingState(playerController));
         }
-        else if (playerController.PlayerIsOnWall())
-        {
-            playerController.SwitchState(new WallClingingState(playerController));
-        }
+        // else if (playerController.PlayerIsOnWall())
+        // {
+        //     if (playerController.hasWallCling)
+        //         playerController.SwitchState(new WallClingingState(playerController));
+        // }
         // drop through one-way platform
         if (input.y < 0)
         {
@@ -527,11 +528,11 @@ public class WallJumpingState : PlayerState
         Vector3 input = playerController.GetInput();
         float jumpDuration = playerController.GetJumpDuration();
 
-        if (playerController.PlayerIsOnWall())
-        {
-            playerController.SwitchState(new WallClingingState(playerController));
-        }
-        else if (jumpDuration > playerController.jumpDurationThreshold || input.z <= 0)
+        // if (playerController.PlayerIsOnWall())
+        // {
+        //     playerController.SwitchState(new WallClingingState(playerController));
+        // }
+        if (jumpDuration > playerController.jumpDurationThreshold || input.z <= 0)
         {
             playerController.SwitchState(new FallingState(playerController));
         }

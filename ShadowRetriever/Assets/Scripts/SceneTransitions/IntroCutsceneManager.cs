@@ -43,6 +43,7 @@ public class IntroCutsceneManager : MonoBehaviour
 
     public IEnumerator SpawnPlayer()
     {
+        dialogueTwoTriggered = true;
         playerController.SpawnPlayer();
 
         // Wait for player Spawn Animation
@@ -51,7 +52,6 @@ public class IntroCutsceneManager : MonoBehaviour
         //Start second dialogue
         if (dialogueTwo != null)
             dialogueTwo.TriggerDialogue();
-        dialogueTwoTriggered = true;
     }
 
 }

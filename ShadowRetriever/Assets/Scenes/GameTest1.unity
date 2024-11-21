@@ -3641,7 +3641,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Welcome to life my minion of shadow and alchemy
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: c9b18bd1fe8ec3f4aab1a7f2f4a839a3, type: 2}
   m_sharedMaterial: {fileID: -7308987383761850647, guid: c9b18bd1fe8ec3f4aab1a7f2f4a839a3, type: 2}
@@ -6404,7 +6404,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 320
   regGravityScale: 1
-  wallClingGravityScale: 0.1
+  wallClingGravityScale: 0.05
   jumpDuration: 1
   rb: {fileID: 0}
   animator: {fileID: 0}
@@ -11127,7 +11127,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Alchemist
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: c9b18bd1fe8ec3f4aab1a7f2f4a839a3, type: 2}
   m_sharedMaterial: {fileID: -7308987383761850647, guid: c9b18bd1fe8ec3f4aab1a7f2f4a839a3, type: 2}

@@ -43,6 +43,6 @@ public class ColliderRespawnPlayer : MonoBehaviour
     private void UpdateSpawnPos()
     {
         spawnPoint = rrm.playerSpawnLocation;
-        Debug.Log($"{spawnPoint}, {name}");
+        // Debug.Log($"{spawnPoint}, {name}");
     }
 }

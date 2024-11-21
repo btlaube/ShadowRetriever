@@ -40,6 +40,7 @@ public class DialogueManager : MonoBehaviour
 
     public void StartDialogue(Dialogue dialogue)
     {
+        Debug.Log($"{dialogue}dialogue started");
         dialogueAnimator.SetTrigger("Open");
 
         // AiAnimator.SetBool("Talking", true);
