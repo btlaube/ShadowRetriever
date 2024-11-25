@@ -2,10 +2,21 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+ public enum PlayerStateEnum
+    {
+        Idle,
+        Running,
+        Falling,
+        Jumping,
+        WallCling,
+        WallJumping
+    }
+
 public class PlayerController : MonoBehaviour
 {
     public float speed = 14f;
     public float acceleration;
+    public float airAcceleration;
     public Vector2 jump;
     public float jumpDurationThreshold;
     public float groundCheckEdgeOffset;
@@ -16,6 +27,7 @@ public class PlayerController : MonoBehaviour
     public float regGravityScale;
     public float wallClingGravityScale;
 
+    // Input vector (horizontal input, vertical input, jump input)
     private Vector3 input;
     [SerializeField] private float jumpDuration;
 
@@ -44,6 +56,7 @@ public class PlayerController : MonoBehaviour
 
     // State
     private PlayerState currentState;
+    private PlayerStateEnum currentStateEnum;
 
     void Awake()
     {
@@ -57,67 +70,32 @@ public class PlayerController : MonoBehaviour
         playerHeight = GetComponent<Collider2D>().bounds.extents.y;
         widthOffset = GetComponent<Collider2D>().offset.x;
         heightOffset = GetComponent<Collider2D>().offset.y;
-
-        // Initial state
-        SetState(new GroundedState(this));
     }
 
     void Start()
     {
         maxJumps = 1;
+        // TODO: Remove the need for flipping sprite??
         sr.flipX = true;
+
+        // Initial state
+        SetState(new IdleState(this));
     }
 
     void Update()
     {
-        // Debug.Log(currentState is GroundedState);
         // Get input
         input.x = Input.GetAxis("Horizontal");
         input.y = Input.GetAxis("Vertical");
         input.z = Input.GetAxis("Jump");
-
-        // Cancel horixontal input for on wall
-        int wallDirection = GetWallDirection();
-        // flip sprite on wall
-        if (wallDirection == -1)
-        {
-            if (input.x < 0.0f)
-                input.x = 0.0f;
-        }
-        else if (wallDirection == 1)
-        {
-            if (input.x > 0.0f)
-                input.x = 0.0f;
-        }
-
-
-        //Update state
-        currentState.Update();
     }
 
     void FixedUpdate()
     {
-        // Use input for physics calculations
-        // Ground or air acceleration
-        var accelerationRate = acceleration;
+        // **State Transition Logic**
+        HandleStateTransitions(); // NEW: Centralized state transition handling
 
-        // Get rigidbody current x and y velocities
-        xVelocity = rb.velocity.x;
-        yVelocity = rb.velocity.y;
-
-        // Apply physics to x and y velocites
-    
-        // Smoothly apply horizontal movment to xVelocity towards the target velocity
-        float targetVelocityX = speed * input.x;
-        float currentVelocityX = rb.velocity.x;       
-        xVelocity = Mathf.MoveTowards(currentVelocityX, targetVelocityX, accelerationRate * Time.fixedDeltaTime);        
-
-        // Apply new x and y velocities
-        rb.velocity = new Vector2(xVelocity, yVelocity);
-
-        //Animator and sprite flip
-        animator.SetFloat("Speed", Mathf.Abs(rb.velocity.x));
-        // sr.flipX = rb.velocity.x < 0.0f;
+        // Sprite flip
         if (rb.velocity.x > 0.0f)
         {
             sr.flipX = false;
@@ -126,16 +104,40 @@ public class PlayerController : MonoBehaviour
         {
             sr.flipX = true;
         }
+
+        // drop through one-way platform
+        if (input.y < 0)
+        {
+            // Get collider stood on and disable
+            // Find all colliders within the circle
+            Collider2D[] colliders = Physics2D.OverlapCircleAll(groundCheck.position, groundCheckRadius);
+            
+            foreach (Collider2D collider in colliders)
+            {
+                // Get the OneWayCollider component from the collider
+                OneWayCollider oneWayCollider = collider.GetComponent<OneWayCollider>();
+                
+                // Check if the component is not null and call SwitchOff()
+                if (oneWayCollider != null)
+                {
+                    oneWayCollider.SwitchOff();
+                }
+            }
+        }
+
+        //Update state
+        currentState.Update();
     }
 
+    // Helper functions
     public Vector3 GetInput()
     {
         return input;
     }
 
-    public float GetJumpDuration()
+    public void CancelHorizontalInput()
     {
-        return jumpDuration;
+        input.x = 0.0f;
     }
 
     public Animator GetAnimator()
@@ -143,19 +145,165 @@ public class PlayerController : MonoBehaviour
         return animator;
     }
 
-    public void SetXVelocity(float xVel)
+    public void HorizontalMovement()
     {
-        xVelocity = xVel;
+        var accelerationRate = acceleration;
+        xVelocity = rb.velocity.x;
+        // Smoothly apply horizontal movment to xVelocity towards the target velocity
+        float targetVelocityX = speed * input.x;
+        float currentVelocityX = rb.velocity.x;       
+        xVelocity = Mathf.MoveTowards(currentVelocityX, targetVelocityX, accelerationRate * Time.fixedDeltaTime);
+        rb.velocity = new Vector2(xVelocity, rb.velocity.y);
     }
 
-    public void SetYVelocity(float yVel)
+    public void VerticalMovement()
     {
-        rb.velocity = new Vector2(rb.velocity.x, yVel);
+        var accelerationRate = acceleration;
+        yVelocity = rb.velocity.y;
+        // Smoothly apply horizontal movment to xVelocity towards the target velocity
+        float targetVelocityY = jump.y;
+        float currentVelocityY = rb.velocity.y;       
+        yVelocity = Mathf.MoveTowards(currentVelocityY, targetVelocityY, accelerationRate * Time.fixedDeltaTime);
+        rb.velocity = new Vector2(rb.velocity.x, yVelocity);
     }
 
-    public void ResetJumpDuration()
+    public void SpawnPlayer()
+    {
+        animator.SetTrigger("Spawn");
+    }
+
+    public void StartJumpTimer()
     {
         jumpDuration = 0.0f;
+    }
+
+    public void IncrementJumpTimer()
+    {
+        jumpDuration += Time.fixedDeltaTime;
+    }
+
+    public void ResetJumpTimer()
+    {
+        jumpDuration = 0.0f;
+    }
+
+    // **NEW: Centralized State Transition Logic**
+    private void HandleStateTransitions()
+    {
+        if (currentStateEnum == PlayerStateEnum.Idle)
+        {
+            // Transition from Idle
+                // To Running
+            if (input.x != 0)
+            {
+                SwitchState(new RunningState(this));
+            }
+                // To Falling
+            else if (!PlayerIsOnGround())
+            {
+                SwitchState(new FallingState(this));
+            }
+            //     // To Jumping
+            // else if ((input.y > 0 || input.z > 0) && CanJump())
+            // {
+            //     SwitchState(new JumpingState(this));
+            //     Jump();
+            // }
+        }
+        else if (currentStateEnum == PlayerStateEnum.Running)
+        {
+            // Transition from Running
+                // To Idle
+            if (input.x == 0.0f)
+            {
+                SwitchState(new IdleState(this));
+            }
+            // To Falling
+            else if (!PlayerIsOnGround())
+            {
+                SwitchState(new FallingState(this));
+            }
+                // To jumping
+            else if ((input.y > 0 || input.z > 0))
+            {
+                SwitchState(new JumpingState(this));
+            }
+        }
+        else if (currentStateEnum == PlayerStateEnum.Falling)
+        {
+            // Transition from Falling
+                // To idle
+            if (PlayerIsOnGround())
+            {
+                SwitchState(new IdleState(this));
+            }
+                // To jumping
+            // else if ((input.y > 0 || input.z > 0) && hasDoubleJump && CanJump())
+            // {
+            //     SwitchState(new JumpingState(this));
+            //     Jump();
+            // }
+                // To wallcling
+            // else if (PlayerIsOnWall() && hasWallCling)
+            // {
+            //     SwitchState(new WallClingState(this));
+            // }
+        }
+        else if (currentStateEnum == PlayerStateEnum.Jumping)
+        {
+            // Transition from Jumping
+                // To WallCling
+            // if (PlayerIsOnWall() && hasWallCling)
+            // {
+            //     SwitchState(new WallClingState(this));
+            // }
+                // To Falling
+            if ((input.y == 0 && input.z == 0) || jumpDuration >= jumpDurationThreshold)
+            {
+                SwitchState(new FallingState(this));
+            }
+        }
+        // else if (currentStateEnum == PlayerStateEnum.WallCling)
+        // {
+        //     // Transition from WallCling
+        //         // To Idle
+        //     if (PlayerIsOnGround())
+        //     {
+        //         SwitchState(new IdleState(this));
+        //     }
+        //         // To Wall Jump
+        //     else if (input.y > 0 || input.z > 0)
+        //     {
+        //         SwitchState(new WallJumpingState(this));
+        //         Jump();
+        //     }
+        //         // To Falling
+        //     else if (!PlayerIsOnWall())
+        //     {
+        //         SwitchState(new FallingState(this));
+        //     }
+        // }
+        // else if (currentStateEnum == PlayerStateEnum.WallJumping)
+        // {
+        //     // Transition from WallJumping
+        //         // To WallCling
+        //     if (PlayerIsOnWall() && hasWallCling)
+        //     {
+        //         SwitchState(new WallClingState(this));
+        //     }
+        //         // To Falling
+        //     else if ((input.y > 0 && input.z > 0))
+        //     {
+        //         SwitchState(new FallingState(this));
+        //     }
+        // }
+    }
+
+    // **UPDATED: SwitchState ensures the state enum is synced**
+    public void SwitchState(PlayerState newState)
+    {
+        SetState(newState);
+        SetStateEnum(newState.GetStateEnum());
     }
 
     public void SetState(PlayerState newState)
@@ -169,16 +317,12 @@ public class PlayerController : MonoBehaviour
         currentState.Enter();
     }
 
-    public void SwitchState(PlayerState newState)
+    public void SetStateEnum(PlayerStateEnum newStateEnum)
     {
-        SetState(newState);
+        currentStateEnum = newStateEnum;
     }
 
-    public void SpawnPlayer()
-    {
-        animator.SetTrigger("Spawn");
-    }
-
+    // Collisions
     // Ground check
     public bool PlayerIsOnGround()
     {
@@ -235,21 +379,6 @@ public class PlayerController : MonoBehaviour
             default:
                 break;
         }
-    }
-
-    public void Jump()
-    {
-        rb.velocity = new Vector2(rb.velocity.x, jump.y);
-        currentJumps++;
-        animator.SetBool("IsJumping", true);
-    }
-
-    public void WallJump()
-    {
-        
-        rb.velocity = sr.flipX ? new Vector2(-jump.x, jump.y) : new Vector2(jump.x, jump.y);
-        animator.SetBool("IsJumping", true);
-        currentJumps++;
     }
 
     private void OnDrawGizmos()

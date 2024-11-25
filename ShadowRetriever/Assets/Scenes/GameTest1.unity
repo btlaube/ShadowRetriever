@@ -6520,7 +6520,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   speed: 7
   acceleration: 20
-  jump: {x: 5, y: 8}
+  airAcceleration: 20
+  jump: {x: 8, y: 8}
   jumpDurationThreshold: 0.25
   groundCheckEdgeOffset: 0.14
   groundCheck: {fileID: 790024361}
@@ -6533,7 +6534,7 @@ MonoBehaviour:
     m_Bits: 320
   regGravityScale: 1
   wallClingGravityScale: 0.05
-  jumpDuration: 1
+  jumpDuration: 0
   rb: {fileID: 0}
   animator: {fileID: 0}
   sr: {fileID: 0}
