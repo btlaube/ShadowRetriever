@@ -33,12 +33,13 @@ public class PlayerController : MonoBehaviour
 
     private float xVelocity;
     private float yVelocity;
-    private float targetXVel;
-    private float targetYVel;
+    private float targetVelocityX;
+    private float targetVelocityY;
 
     public int currentJumps;
     public int maxJumps;
     private bool isJumping;
+    public bool shouldJump;
 
     public bool hasWallCling;
     public bool hasDoubleJump;
@@ -62,20 +63,46 @@ public class PlayerController : MonoBehaviour
         // Initial state
         SetState(new IdleState(this));
     }
+    
+    public Dictionary<string, KeyCode> controlDict;
 
     void Start()
     {
         maxJumps = 1;
         sr.flipX = true;
-    }
+
+        controlDict = new Dictionary<string, KeyCode>
+        {
+            { "Move Up", KeyCode.W },
+            { "Move Down", KeyCode.S },
+            { "Move Left", KeyCode.A },
+            { "Move Right", KeyCode.D },
+            { "Jump", KeyCode.Space },
+            { "Sprint", KeyCode.LeftShift },
+            { "Interact", KeyCode.E },
+            { "Use", KeyCode.F },
+            { "Ability 1", KeyCode.Q },
+            { "Reload", KeyCode.R },
+            { "Open Inventory", KeyCode.Tab },
+            { "Pause Menu", KeyCode.Escape }
+        };
+    } 
 
     void Update()
     {
-        // Debug.Log(currentState is GroundedState);
         // Get input
-        input.x = Input.GetAxis("Horizontal");
-        input.y = Input.GetAxis("Vertical");
-        input.z = Input.GetAxis("Jump");
+        // input.x = Input.GetAxis("Horizontal");
+        // input.y = Input.GetAxis("Vertical");
+        // input.z = Input.GetAxis("Jump");
+
+        input.x = (Input.GetKey(controlDict["Move Left"]) ? -1 : 0) + (Input.GetKey(controlDict["Move Right"]) ? 1 : 0);
+        input.y = (Input.GetKeyDown(controlDict["Move Down"]) ? -1 : 0) + (Input.GetKeyDown(controlDict["Move Up"]) ? 1 : 0);
+        input.z = Input.GetKeyDown(controlDict["Jump"]) ? 1 : 0;
+
+        if (input.y > 0 || input.z > 0)
+        {
+            shouldJump = true;
+        }
 
         // Cancel horixontal input for on wall
         int wallDirection = GetWallDirection();
@@ -90,7 +117,6 @@ public class PlayerController : MonoBehaviour
             if (input.x > 0.0f)
                 input.x = 0.0f;
         }
-
 
         //Update state
         currentState.Update();
@@ -109,9 +135,9 @@ public class PlayerController : MonoBehaviour
         // Apply physics to x and y velocites
     
         // Smoothly apply horizontal movment to xVelocity towards the target velocity
-        float targetVelocityX = speed * input.x;
-        float currentVelocityX = rb.velocity.x;       
-        xVelocity = Mathf.MoveTowards(currentVelocityX, targetVelocityX, accelerationRate * Time.fixedDeltaTime);        
+        targetVelocityX = speed * input.x;
+        float currentVelocityX = rb.velocity.x;
+        xVelocity = Mathf.MoveTowards(currentVelocityX, targetVelocityX, accelerationRate * Time.fixedDeltaTime);
 
         // Apply new x and y velocities
         rb.velocity = new Vector2(xVelocity, yVelocity);
@@ -146,6 +172,31 @@ public class PlayerController : MonoBehaviour
         return jumpDuration;
     }
 
+    public void Jump()
+    {
+        // Jump physics
+        // rb.AddForce(new Vector2(0.0f, jump.y), ForceMode2D.Impulse);
+        rb.velocity = new Vector2(rb.velocity.x * jump.x, jump.y);
+        SetXVelocity(rb.velocity.x * jump.x);
+        // Incremenet jump counter
+        currentJumps++;
+    }
+
+    public void JumpUpdate()
+    {
+        // Continue jump physics
+        rb.AddForce(new Vector2(jump.x, jump.y));
+        // Increment jump timer
+        IncrementJumpDuration();
+    }
+
+    public void EndJump()
+    {
+        ResetJumpDuration();
+        shouldJump = false;
+        SetTargetYVelocity(0.0f);
+    }
+
     public void IncrementJumpDuration()
     {
         jumpDuration += Time.fixedDeltaTime;
@@ -166,6 +217,10 @@ public class PlayerController : MonoBehaviour
         rb.velocity = new Vector2(rb.velocity.x, yVel);
     }
 
+    public void SetTargetYVelocity(float targetYVel)
+    {
+        targetVelocityY = targetYVel;
+    }
 
     public void SetState(PlayerState newState)
     {
@@ -201,9 +256,9 @@ public class PlayerController : MonoBehaviour
             {
                 SwitchState(new FallingState(this));
             }
-            else if ((input.y > 0 || input.z > 0) && currentJumps < maxJumps)
+            else if (shouldJump && currentJumps < maxJumps)
             {
-                Jump();
+                // Jump();
                 SwitchState(new JumpingState(this));
             }
         }
@@ -215,10 +270,10 @@ public class PlayerController : MonoBehaviour
                 SwitchState(new IdleState(this));
             }
             // Transition from Running to Jumping
-            else if ((input.y > 0 || input.z > 0) && currentJumps < maxJumps)
+            else if (shouldJump && currentJumps < maxJumps)
             {
                 SwitchState(new JumpingState(this));
-                Jump();
+                // Jump();
             }
         }
         else if (currentState is FallingState)
@@ -229,9 +284,9 @@ public class PlayerController : MonoBehaviour
             {
                 SwitchState(new IdleState(this));
             }
-            else if ((input.y > 0 || input.z > 0) && currentJumps < maxJumps && hasDoubleJump)
+            else if (shouldJump && currentJumps < maxJumps && hasDoubleJump)
             {
-                Jump();
+                // Jump();
                 SwitchState(new JumpingState(this));
             }
             else if (PlayerIsOnWall() && hasWallCling)
@@ -260,7 +315,8 @@ public class PlayerController : MonoBehaviour
         else if (currentState is JumpingState)
         {
             // Transition from Jumping
-            if (jumpDuration > jumpDurationThreshold || (input.z == 0 && input.y == 0))
+            Debug.Log($"Y input:{input.y}, Z input:{input.z}");
+            if (jumpDuration > jumpDurationThreshold || (!Input.GetKey(controlDict["Move Up"]) && !Input.GetKey(controlDict["Jump"])))
             {
                 SwitchState(new FallingState(this));
             }
@@ -276,9 +332,9 @@ public class PlayerController : MonoBehaviour
             {
                 SwitchState(new FallingState(this));
             }
-            else if ((input.y > 0 || input.z > 0) && hasDoubleJump)
+            else if (shouldJump && hasDoubleJump)
             {
-                Jump();
+                // Jump();
                 SwitchState(new JumpingState(this));
             }
             else if (PlayerIsOnWall() && hasWallCling)
@@ -344,13 +400,6 @@ public class PlayerController : MonoBehaviour
             default:
                 break;
         }
-    }
-
-    public void Jump()
-    {
-        rb.velocity = new Vector2(rb.velocity.x * jump.x, jump.y);
-        currentJumps++;
-        // animator.SetBool("IsJumping", true);
     }
 
     public void WallJump()

@@ -128,23 +128,21 @@ public class JumpingState : PlayerState
     public override void Enter()
     {
         Debug.Log("Enter Jumping");
-        playerController.ResetJumpDuration();
-
-        playerController.rb.AddForce(new Vector2(0.0f, playerController.jump.y), ForceMode2D.Impulse);
-        playerController.SetYVelocity(playerController.jump.y);
-
-        playerController.currentJumps++;
+        playerAnimator.SetBool("IsJumping", true);
+        playerController.Jump();
     }
 
     public override void Update()
     {
         Debug.Log("Jumping");
+        playerController.JumpUpdate();
     }
 
     public override void Exit()
     {
         Debug.Log("Exit Jumping");
-        playerController.SetYVelocity(0.0f);
+        playerAnimator.SetBool("IsJumping", false);
+        playerController.EndJump();
     }
 }
 
