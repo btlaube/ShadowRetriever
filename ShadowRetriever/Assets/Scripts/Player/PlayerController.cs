@@ -136,16 +136,16 @@ public class PlayerController : MonoBehaviour
         return input;
     }
 
+    public Animator GetAnimator()
+    {
+        return animator;
+    }
+
     public float GetJumpDuration()
     {
         return jumpDuration;
     }
 
-<<<<<<< Updated upstream
-    public Animator GetAnimator()
-    {
-        return animator;
-=======
     public void IncrementJumpDuration()
     {
         jumpDuration += Time.fixedDeltaTime;
@@ -154,7 +154,6 @@ public class PlayerController : MonoBehaviour
     public void ResetJumpDuration()
     {
         jumpDuration = 0.0f;
->>>>>>> Stashed changes
     }
 
     public void SetXVelocity(float xVel)
@@ -389,180 +388,3 @@ public class PlayerController : MonoBehaviour
                         new Vector2(transform.position.x + playerWidth + widthOffset + rayCastLengthCheck, transform.position.y + heightOffset));
     }
 }
-
-<<<<<<< Updated upstream
-=======
-public abstract class PlayerState
-{
-    protected PlayerController playerController;
-
-    protected PlayerState(PlayerController controller)
-    {
-        playerController = controller;
-    }
-
-    public abstract void Enter();
-    public abstract void Update();
-    public abstract void Exit();
-}
-
-public class IdleState : PlayerState
-{
-    public IdleState(PlayerController controller) : base(controller) {}
-
-    public override void Enter()
-    {
-        Debug.Log("Enter Idle");
-        playerController.currentJumps = 0;
-    }
-
-    public override void Update()
-    {
-        Debug.Log("Idle");
-        
-    }
-
-    public override void Exit()
-    {
-        Debug.Log("Exit Idle");
-    }
-}
-
-public class RunningState : PlayerState
-{
-    public RunningState(PlayerController controller) : base(controller) {}
-
-    public override void Enter()
-    {
-        Debug.Log("Enter Running");
-    }
-
-    public override void Update()
-    {
-        Debug.Log("Running");
-    }
-
-    public override void Exit()
-    {
-        Debug.Log("Exit Running");
-    }
-}
-
-public class FallingState : PlayerState
-{
-    public FallingState(PlayerController controller) : base(controller) {}
-
-    public override void Enter()
-    {
-        playerController.animator.SetBool("IsFalling", true);
-        Debug.Log("Enter Falling");
-        playerController.rb.gravityScale = playerController.regGravityScale;
-    }
-
-    public override void Update()
-    {
-        Debug.Log("Falling");
-    }
-
-    public override void Exit()
-    {
-        playerController.animator.SetBool("IsFalling", false);
-        Debug.Log("Exit Falling");
-    }
-}
-
-public class WallClingingState : PlayerState
-{
-    public WallClingingState(PlayerController controller) : base(controller) {}
-
-    public override void Enter()
-    {
-        playerController.animator.SetBool("IsOnWall", true);
-        playerController.animator.SetBool("IsJumping", false);
-        Debug.Log("Enter WallClinging");
-        playerController.rb.gravityScale = playerController.wallClingGravityScale;
-        playerController.currentJumps = 0;
-    }
-
-    public override void Update()
-    {
-        Debug.Log("WallClinging");
-
-        int wallDirection = playerController.GetWallDirection();
-        // flip sprite on wall
-        if (wallDirection == -1)
-        {
-            playerController.sr.flipX = false;
-        }
-        else if (wallDirection == 1)
-        {
-            playerController.sr.flipX = true;
-        }        
-    }
-
-    public override void Exit()
-    {
-        Debug.Log("Exit WallClinging");
-        playerController.animator.SetBool("IsOnWall", false);
-    }
-}
-
-public class JumpingState : PlayerState
-{
-    public JumpingState(PlayerController controller) : base(controller) {}
-
-    public override void Enter()
-    {
-        Debug.Log("Enter Jumping");
-        playerController.animator.SetBool("IsJumping", true);
-    }
-
-    public override void Update()
-    {
-        Debug.Log("Jumping");
-    }
-
-    public override void Exit()
-    {
-        Debug.Log("Exit Jumping");
-        playerController.animator.SetBool("IsJumping", false);
-    }
-}
-
-public class WallJumpingState : PlayerState
-{
-    public WallJumpingState(PlayerController controller) : base(controller) {}
-
-    public override void Enter()
-    {
-        Debug.Log("Enter WallJumping");
-    }
-
-    public override void Update()
-    {
-        Debug.Log("WallJumping");       
-
-        int wallDirection = playerController.GetWallDirection();
-        if (wallDirection == -1)
-        {
-            // Jump off left wall using opposite of Jump vector (i.e. (xForce=jump.y, yForce=jump.y))
-            playerController.rb.AddForce(new Vector2(playerController.jump.y/2, playerController.jump.x/2), ForceMode2D.Impulse);
-            // playerController.rb.AddForce(new Vector2(0.0f, playerController.jump.x));
-        }
-        if (wallDirection == 1)
-        {
-            // Jump off right wall
-            playerController.rb.AddForce(new Vector2(-playerController.jump.y/2, playerController.jump.x), ForceMode2D.Impulse);
-            // playerController.rb.AddForce(new Vector2(0.0f, playerController.jump.x));
-        }
-    }
-
-    public override void Exit()
-    {
-        Debug.Log("Exit WallJumping");
-        playerController.SetYVelocity(0.0f);
-    }
-}
-
-
->>>>>>> Stashed changes

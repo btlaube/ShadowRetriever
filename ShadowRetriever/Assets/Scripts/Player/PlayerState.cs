@@ -18,59 +18,45 @@ public abstract class PlayerState
     public abstract void Exit();
 }
 
-public class GroundedState : PlayerState
+public class IdleState : PlayerState
 {
-    public GroundedState(PlayerController controller) : base(controller) {}
+    public IdleState(PlayerController controller) : base(controller) {}
 
     public override void Enter()
     {
-        playerAnimator.SetTrigger("IsJumping");
-        Debug.Log("Enter Grounded");
-        playerController.rb.gravityScale = playerController.regGravityScale;
+        Debug.Log("Enter Idle");
         playerController.currentJumps = 0;
     }
 
     public override void Update()
     {
-        Debug.Log("Grounded");
-
-        Vector3 input = playerController.GetInput();
-
-        // Jump input
-        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W))
-        {
-            // Ground Jump
-            playerController.Jump();
-        }
-
-        if (!playerController.PlayerIsOnGround())
-        {
-            playerController.SwitchState(new FallingState(playerController));
-        }
-        // drop through one-way platform
-        if (input.y < 0 || Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S))
-        {
-            // Get collider stood on and disable
-            // Find all colliders within the circle
-            Collider2D[] colliders = Physics2D.OverlapCircleAll(playerController.groundCheck.position, playerController.groundCheckRadius);
-            
-            foreach (Collider2D collider in colliders)
-            {
-                // Get the OneWayCollider component from the collider
-                OneWayCollider oneWayCollider = collider.GetComponent<OneWayCollider>();
-                
-                // Check if the component is not null and call SwitchOff()
-                if (oneWayCollider != null)
-                {
-                    oneWayCollider.SwitchOff();
-                }
-            }
-        }
+        Debug.Log("Idle");
+        
     }
 
     public override void Exit()
     {
-        Debug.Log("Exit Grounded");
+        Debug.Log("Exit Idle");
+    }
+}
+
+public class RunningState : PlayerState
+{
+    public RunningState(PlayerController controller) : base(controller) {}
+
+    public override void Enter()
+    {
+        Debug.Log("Enter Running");
+    }
+
+    public override void Update()
+    {
+        Debug.Log("Running");
+    }
+
+    public override void Exit()
+    {
+        Debug.Log("Exit Running");
     }
 }
 
@@ -88,25 +74,6 @@ public class FallingState : PlayerState
     public override void Update()
     {
         Debug.Log("Falling");
-        Vector3 input = playerController.GetInput();
-
-        // Check Jump
-        if ((Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W)) && playerController.currentJumps < playerController.maxJumps)
-        {
-            if (playerController.hasDoubleJump)
-                // Double Jump
-                playerController.Jump();
-        }
-
-        if (playerController.PlayerIsOnGround())
-        {
-            playerController.SwitchState(new GroundedState(playerController));
-        }
-        else if (playerController.PlayerIsOnWall())
-        {
-            if (playerController.hasWallCling)
-                playerController.SwitchState(new WallClingingState(playerController));
-        }
     }
 
     public override void Exit()
@@ -145,21 +112,6 @@ public class WallClingingState : PlayerState
         {
             playerController.sr.flipX = true;
         }
-
-        // Jump input
-        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W) && playerController.currentJumps < playerController.maxJumps)
-        {
-            playerController.WallJump();
-        }
-
-        if (playerController.PlayerIsOnGround())
-        {
-            playerController.SwitchState(new GroundedState(playerController));
-        }
-        else if (!playerController.PlayerIsOnWall())
-        {
-            playerController.SwitchState(new FallingState(playerController));
-        }
     }
 
     public override void Exit()
@@ -187,19 +139,6 @@ public class JumpingState : PlayerState
     public override void Update()
     {
         Debug.Log("Jumping");
-
-        Vector3 input = playerController.GetInput();
-        float jumpDuration = playerController.GetJumpDuration();
-
-        if (playerController.PlayerIsOnWall())
-        {
-            if (playerController.hasWallCling)
-                playerController.SwitchState(new WallClingingState(playerController));
-        }
-        else if (jumpDuration > playerController.jumpDurationThreshold || input.z <= 0)
-        {
-            playerController.SwitchState(new FallingState(playerController));
-        }
     }
 
     public override void Exit()
@@ -216,8 +155,6 @@ public class WallJumpingState : PlayerState
     public override void Enter()
     {
         Debug.Log("Enter WallJumping");
-        playerController.ResetJumpDuration();
-
         int wallDirection = playerController.GetWallDirection();
         if (wallDirection == -1)
         {
@@ -230,26 +167,16 @@ public class WallJumpingState : PlayerState
             playerController.rb.AddForce(new Vector2(-playerController.jump.y/2, playerController.jump.x), ForceMode2D.Impulse);
         }
 
-        playerController.currentJumps++;
     }
 
     public override void Update()
     {
         Debug.Log("WallJumping");
-
-        Vector3 input = playerController.GetInput();
-        float jumpDuration = playerController.GetJumpDuration();
-
-        if (jumpDuration > playerController.jumpDurationThreshold || input.z <= 0)
-        {
-            playerController.SwitchState(new FallingState(playerController));
-        }
     }
 
     public override void Exit()
     {
         Debug.Log("Exit WallJumping");
-        playerController.SetYVelocity(0.0f);
     }
 }
 
