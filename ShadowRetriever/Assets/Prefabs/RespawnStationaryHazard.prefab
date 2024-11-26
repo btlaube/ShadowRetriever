@@ -89,10 +89,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 8003381224244977850}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3f642fc1ad6ce9249b6aab9410280c1a, type: 3}
+  m_Script: {fileID: 11500000, guid: be6034a2712fe854880796a19197e784, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  spawnPoint: {x: 10.07, y: -2, z: 0}
+  spawnPoint: {x: 0, y: 0, z: 0}
 --- !u!50 &3521700027994324533
 Rigidbody2D:
   serializedVersion: 4

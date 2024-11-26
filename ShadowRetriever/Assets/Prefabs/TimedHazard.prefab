@@ -10,12 +10,12 @@ GameObject:
   m_Component:
   - component: {fileID: 3933750763319613111}
   - component: {fileID: 1819413458317199662}
-  - component: {fileID: 2305291776457298958}
   - component: {fileID: 8670227429689177460}
   - component: {fileID: 8916096029987700932}
   - component: {fileID: 7215736261525482243}
   - component: {fileID: 1382916294278032476}
   - component: {fileID: 914400214882183050}
+  - component: {fileID: 6195662393942021855}
   m_Layer: 0
   m_Name: TimedHazard
   m_TagString: Untagged
@@ -83,19 +83,6 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 2, y: 2}
   m_EdgeRadius: 0
---- !u!114 &2305291776457298958
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4107933821031484356}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3f642fc1ad6ce9249b6aab9410280c1a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  spawnPoint: {x: 10.07, y: -2, z: 0}
 --- !u!50 &8670227429689177460
 Rigidbody2D:
   serializedVersion: 4
@@ -243,3 +230,16 @@ MonoBehaviour:
     pitch: 1
     loop: 0
     source: {fileID: 0}
+--- !u!114 &6195662393942021855
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4107933821031484356}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be6034a2712fe854880796a19197e784, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  spawnPoint: {x: 0, y: 0, z: 0}

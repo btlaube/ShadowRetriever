@@ -6,6 +6,7 @@ public class PlayerController : MonoBehaviour
 {
     public float speed = 14f;
     public float acceleration;
+    public float airAcceleration;
     public Vector2 jump;
     public float jumpDurationThreshold;
     public float groundCheckEdgeOffset;
@@ -59,7 +60,7 @@ public class PlayerController : MonoBehaviour
         heightOffset = GetComponent<Collider2D>().offset.y;
 
         // Initial state
-        SetState(new GroundedState(this));
+        SetState(new IdleState(this));
     }
 
     void Start()
@@ -99,7 +100,7 @@ public class PlayerController : MonoBehaviour
     {
         // Use input for physics calculations
         // Ground or air acceleration
-        var accelerationRate = acceleration;
+        var accelerationRate = PlayerIsOnGround() ? acceleration : airAcceleration;
 
         // Get rigidbody current x and y velocities
         xVelocity = rb.velocity.x;
@@ -126,6 +127,8 @@ public class PlayerController : MonoBehaviour
         {
             sr.flipX = true;
         }
+
+        HandleStateTransitions();
     }
 
     public Vector3 GetInput()
@@ -138,9 +141,20 @@ public class PlayerController : MonoBehaviour
         return jumpDuration;
     }
 
+<<<<<<< Updated upstream
     public Animator GetAnimator()
     {
         return animator;
+=======
+    public void IncrementJumpDuration()
+    {
+        jumpDuration += Time.fixedDeltaTime;
+    }
+
+    public void ResetJumpDuration()
+    {
+        jumpDuration = 0.0f;
+>>>>>>> Stashed changes
     }
 
     public void SetXVelocity(float xVel)
@@ -153,10 +167,6 @@ public class PlayerController : MonoBehaviour
         rb.velocity = new Vector2(rb.velocity.x, yVel);
     }
 
-    public void ResetJumpDuration()
-    {
-        jumpDuration = 0.0f;
-    }
 
     public void SetState(PlayerState newState)
     {
@@ -177,6 +187,106 @@ public class PlayerController : MonoBehaviour
     public void SpawnPlayer()
     {
         animator.SetTrigger("Spawn");
+    }
+
+    private void HandleStateTransitions()
+    {
+        if (currentState is IdleState)
+        {
+            // Transition from Idle to Running
+            if (Mathf.Abs(input.x) > 0.1f)
+            {
+                SwitchState(new RunningState(this));
+            }
+            else if (!PlayerIsOnGround())
+            {
+                SwitchState(new FallingState(this));
+            }
+            else if ((input.y > 0 || input.z > 0) && currentJumps < maxJumps)
+            {
+                Jump();
+                SwitchState(new JumpingState(this));
+            }
+        }
+        else if (currentState is RunningState)
+        {
+            // Transition from Running to Idle
+            if (Mathf.Abs(input.x) < 0.1f)
+            {
+                SwitchState(new IdleState(this));
+            }
+            // Transition from Running to Jumping
+            else if ((input.y > 0 || input.z > 0) && currentJumps < maxJumps)
+            {
+                SwitchState(new JumpingState(this));
+                Jump();
+            }
+        }
+        else if (currentState is FallingState)
+        {
+            // Transition from Falling
+            // Check Jump
+            if (PlayerIsOnGround())
+            {
+                SwitchState(new IdleState(this));
+            }
+            else if ((input.y > 0 || input.z > 0) && currentJumps < maxJumps && hasDoubleJump)
+            {
+                Jump();
+                SwitchState(new JumpingState(this));
+            }
+            else if (PlayerIsOnWall() && hasWallCling)
+            {
+                SwitchState(new WallClingingState(this));
+            }
+        }
+        else if (currentState is WallClingingState)
+        {
+            // Transition from WallCling
+            if (PlayerIsOnGround())
+            {
+                SwitchState(new IdleState(this));
+            }
+            // Transition from WallCling to WallJumping
+            else if (input.y > 0 || input.z > 0)
+            {
+                WallJump();
+                SwitchState(new WallJumpingState(this));
+            }
+            else if (!PlayerIsOnWall())
+            {
+                SwitchState(new FallingState(this));
+            }
+        }
+        else if (currentState is JumpingState)
+        {
+            // Transition from Jumping
+            if (jumpDuration > jumpDurationThreshold || (input.z == 0 && input.y == 0))
+            {
+                SwitchState(new FallingState(this));
+            }
+            if (PlayerIsOnWall() && hasWallCling)
+            {
+                SwitchState(new WallClingingState(this));
+            }
+        }
+        else if (currentState is WallJumpingState)
+        {
+            // Transition from Jumping
+            if (rb.velocity.y < 0)
+            {
+                SwitchState(new FallingState(this));
+            }
+            else if ((input.y > 0 || input.z > 0) && hasDoubleJump)
+            {
+                Jump();
+                SwitchState(new JumpingState(this));
+            }
+            else if (PlayerIsOnWall() && hasWallCling)
+            {
+                SwitchState(new WallClingingState(this));
+            }
+        }
     }
 
     // Ground check
@@ -230,7 +340,7 @@ public class PlayerController : MonoBehaviour
                 break;
             case 2:
                 hasDoubleJump = true;
-                maxJumps = 2;
+                maxJumps++;
                 break;
             default:
                 break;
@@ -239,16 +349,16 @@ public class PlayerController : MonoBehaviour
 
     public void Jump()
     {
-        rb.velocity = new Vector2(rb.velocity.x, jump.y);
+        rb.velocity = new Vector2(rb.velocity.x * jump.x, jump.y);
         currentJumps++;
-        animator.SetBool("IsJumping", true);
+        // animator.SetBool("IsJumping", true);
     }
 
     public void WallJump()
     {
         
         rb.velocity = sr.flipX ? new Vector2(-jump.x, jump.y) : new Vector2(jump.x, jump.y);
-        animator.SetBool("IsJumping", true);
+        // animator.SetBool("IsJumping", true);
         currentJumps++;
     }
 
@@ -280,3 +390,179 @@ public class PlayerController : MonoBehaviour
     }
 }
 
+<<<<<<< Updated upstream
+=======
+public abstract class PlayerState
+{
+    protected PlayerController playerController;
+
+    protected PlayerState(PlayerController controller)
+    {
+        playerController = controller;
+    }
+
+    public abstract void Enter();
+    public abstract void Update();
+    public abstract void Exit();
+}
+
+public class IdleState : PlayerState
+{
+    public IdleState(PlayerController controller) : base(controller) {}
+
+    public override void Enter()
+    {
+        Debug.Log("Enter Idle");
+        playerController.currentJumps = 0;
+    }
+
+    public override void Update()
+    {
+        Debug.Log("Idle");
+        
+    }
+
+    public override void Exit()
+    {
+        Debug.Log("Exit Idle");
+    }
+}
+
+public class RunningState : PlayerState
+{
+    public RunningState(PlayerController controller) : base(controller) {}
+
+    public override void Enter()
+    {
+        Debug.Log("Enter Running");
+    }
+
+    public override void Update()
+    {
+        Debug.Log("Running");
+    }
+
+    public override void Exit()
+    {
+        Debug.Log("Exit Running");
+    }
+}
+
+public class FallingState : PlayerState
+{
+    public FallingState(PlayerController controller) : base(controller) {}
+
+    public override void Enter()
+    {
+        playerController.animator.SetBool("IsFalling", true);
+        Debug.Log("Enter Falling");
+        playerController.rb.gravityScale = playerController.regGravityScale;
+    }
+
+    public override void Update()
+    {
+        Debug.Log("Falling");
+    }
+
+    public override void Exit()
+    {
+        playerController.animator.SetBool("IsFalling", false);
+        Debug.Log("Exit Falling");
+    }
+}
+
+public class WallClingingState : PlayerState
+{
+    public WallClingingState(PlayerController controller) : base(controller) {}
+
+    public override void Enter()
+    {
+        playerController.animator.SetBool("IsOnWall", true);
+        playerController.animator.SetBool("IsJumping", false);
+        Debug.Log("Enter WallClinging");
+        playerController.rb.gravityScale = playerController.wallClingGravityScale;
+        playerController.currentJumps = 0;
+    }
+
+    public override void Update()
+    {
+        Debug.Log("WallClinging");
+
+        int wallDirection = playerController.GetWallDirection();
+        // flip sprite on wall
+        if (wallDirection == -1)
+        {
+            playerController.sr.flipX = false;
+        }
+        else if (wallDirection == 1)
+        {
+            playerController.sr.flipX = true;
+        }        
+    }
+
+    public override void Exit()
+    {
+        Debug.Log("Exit WallClinging");
+        playerController.animator.SetBool("IsOnWall", false);
+    }
+}
+
+public class JumpingState : PlayerState
+{
+    public JumpingState(PlayerController controller) : base(controller) {}
+
+    public override void Enter()
+    {
+        Debug.Log("Enter Jumping");
+        playerController.animator.SetBool("IsJumping", true);
+    }
+
+    public override void Update()
+    {
+        Debug.Log("Jumping");
+    }
+
+    public override void Exit()
+    {
+        Debug.Log("Exit Jumping");
+        playerController.animator.SetBool("IsJumping", false);
+    }
+}
+
+public class WallJumpingState : PlayerState
+{
+    public WallJumpingState(PlayerController controller) : base(controller) {}
+
+    public override void Enter()
+    {
+        Debug.Log("Enter WallJumping");
+    }
+
+    public override void Update()
+    {
+        Debug.Log("WallJumping");       
+
+        int wallDirection = playerController.GetWallDirection();
+        if (wallDirection == -1)
+        {
+            // Jump off left wall using opposite of Jump vector (i.e. (xForce=jump.y, yForce=jump.y))
+            playerController.rb.AddForce(new Vector2(playerController.jump.y/2, playerController.jump.x/2), ForceMode2D.Impulse);
+            // playerController.rb.AddForce(new Vector2(0.0f, playerController.jump.x));
+        }
+        if (wallDirection == 1)
+        {
+            // Jump off right wall
+            playerController.rb.AddForce(new Vector2(-playerController.jump.y/2, playerController.jump.x), ForceMode2D.Impulse);
+            // playerController.rb.AddForce(new Vector2(0.0f, playerController.jump.x));
+        }
+    }
+
+    public override void Exit()
+    {
+        Debug.Log("Exit WallJumping");
+        playerController.SetYVelocity(0.0f);
+    }
+}
+
+
+>>>>>>> Stashed changes
