@@ -252,14 +252,15 @@ public class PlayerController : MonoBehaviour
             {
                 SwitchState(new RunningState(this));
             }
-            else if (!PlayerIsOnGround())
-            {
-                SwitchState(new FallingState(this));
-            }
             else if (shouldJump && currentJumps < maxJumps)
             {
                 // Jump();
                 SwitchState(new JumpingState(this));
+            }
+            else if (!PlayerIsOnGround())
+            {
+                // currentJumps++;
+                SwitchState(new FallingState(this));
             }
         }
         else if (currentState is RunningState)
@@ -268,6 +269,11 @@ public class PlayerController : MonoBehaviour
             if (Mathf.Abs(input.x) < 0.1f)
             {
                 SwitchState(new IdleState(this));
+            }
+            else if (!PlayerIsOnGround())
+            {
+                // currentJumps++;
+                SwitchState(new FallingState(this));
             }
             // Transition from Running to Jumping
             else if (shouldJump && currentJumps < maxJumps)
@@ -351,7 +357,7 @@ public class PlayerController : MonoBehaviour
         bool groundCheck2 = Physics2D.Raycast(new Vector2(transform.position.x + (playerWidth - groundCheckEdgeOffset ) + widthOffset, transform.position.y - playerHeight + heightOffset), -Vector2.up, rayCastLengthCheck, groundLayer);
         bool groundCheck3 = Physics2D.Raycast(new Vector2(transform.position.x - (playerWidth - groundCheckEdgeOffset ), transform.position.y - playerHeight + heightOffset), -Vector2.up, rayCastLengthCheck, groundLayer);
 
-        return groundCheck1;
+        return groundCheck1 || groundCheck2 || groundCheck3;
     }
 
     public bool PlayerIsOnWall()
@@ -419,21 +425,39 @@ public class PlayerController : MonoBehaviour
             playerHeight = GetComponent<Collider2D>().bounds.extents.y;
         }
 
-        Gizmos.color = Color.red;
 
         // Draw raycasts for ground check
+        Gizmos.color = Color.red;
+        // Ground check 1
         Gizmos.DrawLine(new Vector2(transform.position.x + widthOffset, transform.position.y - playerHeight + heightOffset),
                         new Vector2(transform.position.x + widthOffset, transform.position.y - playerHeight + heightOffset - rayCastLengthCheck));
+        // Ground check 2
         Gizmos.DrawLine(new Vector2(transform.position.x + (playerWidth - groundCheckEdgeOffset ) + widthOffset, transform.position.y - playerHeight + heightOffset),
                         new Vector2(transform.position.x + (playerWidth - groundCheckEdgeOffset ) + widthOffset, transform.position.y - playerHeight + heightOffset - rayCastLengthCheck));
+        // Ground check 3
         Gizmos.DrawLine(new Vector2(transform.position.x - (playerWidth - groundCheckEdgeOffset ) + widthOffset, transform.position.y - playerHeight + heightOffset),
                         new Vector2(transform.position.x - (playerWidth - groundCheckEdgeOffset ) + widthOffset, transform.position.y - playerHeight + heightOffset - rayCastLengthCheck));
 
         // Draw raycasts for wall check
         Gizmos.color = Color.blue;
+        // Left wall 1
         Gizmos.DrawLine(new Vector2(transform.position.x - playerWidth + widthOffset, transform.position.y + heightOffset),
                         new Vector2(transform.position.x - playerWidth + widthOffset - rayCastLengthCheck, transform.position.y + heightOffset));
+        // Left wall 2
+        Gizmos.DrawLine(new Vector2(transform.position.x - playerWidth + widthOffset, transform.position.y + (playerHeight - groundCheckEdgeOffset) + heightOffset),
+                        new Vector2(transform.position.x - playerWidth + widthOffset - rayCastLengthCheck, transform.position.y + (playerHeight - groundCheckEdgeOffset) + heightOffset));
+        // Left wall 3
+        Gizmos.DrawLine(new Vector2(transform.position.x - playerWidth + widthOffset, transform.position.y - (playerHeight - groundCheckEdgeOffset) + heightOffset),
+                        new Vector2(transform.position.x - playerWidth + widthOffset - rayCastLengthCheck, transform.position.y - (playerHeight - groundCheckEdgeOffset) + heightOffset));
+        
+        // Right wall 1
         Gizmos.DrawLine(new Vector2(transform.position.x + playerWidth + widthOffset, transform.position.y + heightOffset),
                         new Vector2(transform.position.x + playerWidth + widthOffset + rayCastLengthCheck, transform.position.y + heightOffset));
+        // Right wall 2
+        Gizmos.DrawLine(new Vector2(transform.position.x + playerWidth + widthOffset, transform.position.y + (playerHeight - groundCheckEdgeOffset) + heightOffset),
+                        new Vector2(transform.position.x + playerWidth + widthOffset + rayCastLengthCheck, transform.position.y + (playerHeight - groundCheckEdgeOffset) + heightOffset));
+        // Right wall 3
+        Gizmos.DrawLine(new Vector2(transform.position.x + playerWidth + widthOffset, transform.position.y - (playerHeight - groundCheckEdgeOffset) + heightOffset),
+                        new Vector2(transform.position.x + playerWidth + widthOffset + rayCastLengthCheck, transform.position.y - (playerHeight - groundCheckEdgeOffset) + heightOffset));
     }
 }

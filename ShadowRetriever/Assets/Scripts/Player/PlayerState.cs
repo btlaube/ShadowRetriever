@@ -153,6 +153,10 @@ public class WallJumpingState : PlayerState
     public override void Enter()
     {
         Debug.Log("Enter WallJumping");
+        playerAnimator.SetBool("IsJumping", true);
+        playerController.Jump();
+
+        // Flip sprite on wall
         int wallDirection = playerController.GetWallDirection();
         if (wallDirection == -1)
         {
