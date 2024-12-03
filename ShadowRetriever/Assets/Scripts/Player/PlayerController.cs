@@ -66,7 +66,7 @@ public class PlayerController : MonoBehaviour
         SetState(new IdleState(this));
     }
     
-    public Dictionary<string, KeyCode> controlDict;
+    public Dictionary<string, List<KeyCode>> controlDict;
 
     void Start()
     {
@@ -74,29 +74,29 @@ public class PlayerController : MonoBehaviour
         sr.flipX = true;
         canMove = true;
 
-        controlDict = new Dictionary<string, KeyCode>
+        controlDict = new Dictionary<string, List<KeyCode>>
         {
-            { "Move Up", KeyCode.W },
-            { "Move Down", KeyCode.S },
-            { "Move Left", KeyCode.A },
-            { "Move Right", KeyCode.D },
-            { "Jump", KeyCode.Space },
-            { "Sprint", KeyCode.LeftShift },
-            { "Interact", KeyCode.E },
-            { "Use", KeyCode.F },
-            { "Ability 1", KeyCode.Q },
-            { "Reload", KeyCode.R },
-            { "Open Inventory", KeyCode.Tab },
-            { "Pause Menu", KeyCode.Escape }
+            { "Move Up", new List<KeyCode> { KeyCode.W, KeyCode.UpArrow } },
+            { "Move Down", new List<KeyCode> { KeyCode.S, KeyCode.DownArrow } },
+            { "Move Left", new List<KeyCode> { KeyCode.A, KeyCode.LeftArrow } },
+            { "Move Right", new List<KeyCode> { KeyCode.D, KeyCode.RightArrow } },
+            { "Jump", new List<KeyCode> { KeyCode.Space } },
+            { "Sprint", new List<KeyCode> { KeyCode.LeftShift } },
+            { "Interact", new List<KeyCode> { KeyCode.E } },
+            { "Use", new List<KeyCode> { KeyCode.F } },
+            { "Ability 1", new List<KeyCode> { KeyCode.Q } },
+            { "Reload", new List<KeyCode> { KeyCode.R } },
+            { "Open Inventory", new List<KeyCode> { KeyCode.Tab } },
+            { "Pause Menu", new List<KeyCode> { KeyCode.Escape } }
         };
     } 
 
     void Update()
     {
         // Get input
-        input.x = (Input.GetKey(controlDict["Move Left"]) ? -1 : 0) + (Input.GetKey(controlDict["Move Right"]) ? 1 : 0);
-        input.y = (Input.GetKeyDown(controlDict["Move Down"]) ? -1 : 0) + (Input.GetKeyDown(controlDict["Move Up"]) ? 1 : 0);
-        input.z = Input.GetKeyDown(controlDict["Jump"]) ? 1 : 0;
+        input.x = (IsAnyKeyHeld("Move Left") ? -1 : 0) + (IsAnyKeyHeld("Move Right") ? 1 : 0);
+        input.y = (IsAnyKeyDown("Move Down") ? -1 : 0) + (IsAnyKeyDown("Move Up") ? 1 : 0);
+        input.z = IsAnyKeyDown("Jump") ? 1 : 0;
         if(!canMove) input = Vector3.zero;
 
         if (input.y > 0 || input.z > 0)
@@ -141,6 +141,141 @@ public class PlayerController : MonoBehaviour
         }
 
         HandleStateTransitions();
+    }
+
+    private void HandleStateTransitions()
+    {
+        if (currentState is IdleState)
+        {
+            // Transition from Idle to Running
+            if (Mathf.Abs(input.x) > 0.1f)
+            {
+                SwitchState(new RunningState(this));
+            }
+            else if (shouldJump && currentJumps < maxJumps)
+            {
+                SwitchState(new JumpingState(this));
+            }
+            else if (!PlayerIsOnGround())
+            {
+                SwitchState(new FallingState(this));
+            }
+        }
+        else if (currentState is RunningState)
+        {
+            // Transition from Running to Idle
+            if (Mathf.Abs(input.x) < 0.1f)
+            {
+                SwitchState(new IdleState(this));
+            }
+            else if (!PlayerIsOnGround())
+            {
+                SwitchState(new FallingState(this));
+            }
+            // Transition from Running to Jumping
+            else if (shouldJump && currentJumps < maxJumps)
+            {
+                SwitchState(new JumpingState(this));
+            }
+        }
+        else if (currentState is FallingState)
+        {
+            // Transition from Falling
+            if (PlayerIsOnGround())
+            {
+                SwitchState(new IdleState(this));
+            }
+            else if (shouldJump && currentJumps < maxJumps && hasDoubleJump)
+            {
+                SwitchState(new JumpingState(this));
+            }
+            else if (PlayerIsOnWall() && hasWallCling)
+            {
+                SwitchState(new WallClingingState(this));
+            }
+        }
+        else if (currentState is WallClingingState)
+        {
+            // Transition from WallCling
+            if (PlayerIsOnGround())
+            {
+                SwitchState(new IdleState(this));
+            }
+            // Transition from WallCling to WallJumping
+            else if (shouldJump && currentJumps < maxJumps)
+            {
+                SwitchState(new WallJumpingState(this));
+            }
+            else if (!PlayerIsOnWall())
+            {
+                SwitchState(new FallingState(this));
+            }
+        }
+        else if (currentState is JumpingState)
+        {
+            // Transition from Jumping
+            if (jumpDuration > jumpDurationThreshold || (AllKeysUp("Move Up") && AllKeysUp("Jump")))
+            {
+                SwitchState(new FallingState(this));
+            }
+            if (PlayerIsOnWall() && hasWallCling)
+            {
+                SwitchState(new WallClingingState(this));
+            }
+        }
+        else if (currentState is WallJumpingState)
+        {
+            // Transition from Wall Jumping
+            if (jumpDuration > jumpDurationThreshold || (AllKeysUp("Move Up") && AllKeysUp("Jump")))
+            {
+                SwitchState(new FallingState(this));
+            }
+            if (PlayerIsOnWall() && hasWallCling)
+            {
+                SwitchState(new WallClingingState(this));
+            }
+        }
+    }
+
+    // Input Helper methods
+    private bool IsAnyKeyHeld(string action)
+    {
+        if (controlDict.TryGetValue(action, out var keys))
+        {
+            foreach (var key in keys)
+            {
+                if (Input.GetKey(key))
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    private bool IsAnyKeyDown(string action)
+    {
+        if (controlDict.TryGetValue(action, out var keys))
+        {
+            foreach (var key in keys)
+            {
+                if (Input.GetKeyDown(key))
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    private bool AllKeysUp(string action)
+    {
+        if (controlDict.TryGetValue(action, out var keys))
+        {
+            foreach (var key in keys)
+            {
+                if (Input.GetKey(key)) // If any key is still held, return false
+                    return false;
+            }
+            return true; // All keys are up
+        }
+        return true; // Return true if the action has no mapped keys
     }
 
     public Vector3 GetInput()
@@ -277,99 +412,6 @@ public class PlayerController : MonoBehaviour
         animator.SetTrigger("Spawn");
     }
 
-    private void HandleStateTransitions()
-    {
-        if (currentState is IdleState)
-        {
-            // Transition from Idle to Running
-            if (Mathf.Abs(input.x) > 0.1f)
-            {
-                SwitchState(new RunningState(this));
-            }
-            else if (shouldJump && currentJumps < maxJumps)
-            {
-                SwitchState(new JumpingState(this));
-            }
-            else if (!PlayerIsOnGround())
-            {
-                SwitchState(new FallingState(this));
-            }
-        }
-        else if (currentState is RunningState)
-        {
-            // Transition from Running to Idle
-            if (Mathf.Abs(input.x) < 0.1f)
-            {
-                SwitchState(new IdleState(this));
-            }
-            else if (!PlayerIsOnGround())
-            {
-                SwitchState(new FallingState(this));
-            }
-            // Transition from Running to Jumping
-            else if (shouldJump && currentJumps < maxJumps)
-            {
-                SwitchState(new JumpingState(this));
-            }
-        }
-        else if (currentState is FallingState)
-        {
-            // Transition from Falling
-            if (PlayerIsOnGround())
-            {
-                SwitchState(new IdleState(this));
-            }
-            else if (shouldJump && currentJumps < maxJumps && hasDoubleJump)
-            {
-                SwitchState(new JumpingState(this));
-            }
-            else if (PlayerIsOnWall() && hasWallCling)
-            {
-                SwitchState(new WallClingingState(this));
-            }
-        }
-        else if (currentState is WallClingingState)
-        {
-            // Transition from WallCling
-            if (PlayerIsOnGround())
-            {
-                SwitchState(new IdleState(this));
-            }
-            // Transition from WallCling to WallJumping
-            else if (shouldJump && currentJumps < maxJumps)
-            {
-                SwitchState(new WallJumpingState(this));
-            }
-            else if (!PlayerIsOnWall())
-            {
-                SwitchState(new FallingState(this));
-            }
-        }
-        else if (currentState is JumpingState)
-        {
-            // Transition from Jumping
-            if (jumpDuration > jumpDurationThreshold || (!Input.GetKey(controlDict["Move Up"]) && !Input.GetKey(controlDict["Jump"])))
-            {
-                SwitchState(new FallingState(this));
-            }
-            if (PlayerIsOnWall() && hasWallCling)
-            {
-                SwitchState(new WallClingingState(this));
-            }
-        }
-        else if (currentState is WallJumpingState)
-        {
-            // Transition from Wall Jumping
-            if (jumpDuration > jumpDurationThreshold || (!Input.GetKey(controlDict["Move Up"]) && !Input.GetKey(controlDict["Jump"])))
-            {
-                SwitchState(new FallingState(this));
-            }
-            if (PlayerIsOnWall() && hasWallCling)
-            {
-                SwitchState(new WallClingingState(this));
-            }
-        }
-    }
 
     // Ground check
     public bool PlayerIsOnGround()
