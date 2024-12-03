@@ -90,7 +90,6 @@ public class WallClingingState : PlayerState
     public override void Enter()
     {
         playerAnimator.SetBool("IsOnWall", true);
-        playerAnimator.SetBool("IsJumping", false);
         Debug.Log("Enter WallClinging");
         playerController.rb.gravityScale = playerController.wallClingGravityScale;
         playerController.SetYVelocity(0.0f);
@@ -100,10 +99,12 @@ public class WallClingingState : PlayerState
     public override void Update()
     {
         Debug.Log("WallClinging");
-        Vector3 input = playerController.GetInput();
 
-        int wallDirection = playerController.GetWallDirection();
+        // Cancel horixontal input for on wall
+        playerController.CancelInputOnWall();
+
         // flip sprite on wall
+        int wallDirection = playerController.GetWallDirection();
         if (wallDirection == -1)
         {
             playerController.sr.flipX = false;
@@ -154,31 +155,20 @@ public class WallJumpingState : PlayerState
     {
         Debug.Log("Enter WallJumping");
         playerAnimator.SetBool("IsJumping", true);
-        playerController.Jump();
-
-        // Flip sprite on wall
-        int wallDirection = playerController.GetWallDirection();
-        if (wallDirection == -1)
-        {
-            // Jump off left wall using opposite of Jump vector (i.e. (xForce=jump.y, yForce=jump.y))
-            playerController.rb.AddForce(new Vector2(playerController.jump.y/2, playerController.jump.x/2), ForceMode2D.Impulse);
-        }
-        if (wallDirection == 1)
-        {
-            // Jump off right wall
-            playerController.rb.AddForce(new Vector2(-playerController.jump.y/2, playerController.jump.x), ForceMode2D.Impulse);
-        }
-
+        playerController.WallJump();
     }
 
     public override void Update()
     {
         Debug.Log("WallJumping");
+        playerController.WallJumpUpdate();
     }
 
     public override void Exit()
     {
         Debug.Log("Exit WallJumping");
+        playerAnimator.SetBool("IsJumping", false);
+        playerController.EndJump();
     }
 }
 

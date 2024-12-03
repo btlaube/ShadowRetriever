@@ -44,6 +44,8 @@ public class PlayerController : MonoBehaviour
     public bool hasWallCling;
     public bool hasDoubleJump;
 
+    public bool canMove;
+
     // State
     private PlayerState currentState;
 
@@ -70,6 +72,7 @@ public class PlayerController : MonoBehaviour
     {
         maxJumps = 1;
         sr.flipX = true;
+        canMove = true;
 
         controlDict = new Dictionary<string, KeyCode>
         {
@@ -91,31 +94,14 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         // Get input
-        // input.x = Input.GetAxis("Horizontal");
-        // input.y = Input.GetAxis("Vertical");
-        // input.z = Input.GetAxis("Jump");
-
         input.x = (Input.GetKey(controlDict["Move Left"]) ? -1 : 0) + (Input.GetKey(controlDict["Move Right"]) ? 1 : 0);
         input.y = (Input.GetKeyDown(controlDict["Move Down"]) ? -1 : 0) + (Input.GetKeyDown(controlDict["Move Up"]) ? 1 : 0);
         input.z = Input.GetKeyDown(controlDict["Jump"]) ? 1 : 0;
+        if(!canMove) input = Vector3.zero;
 
         if (input.y > 0 || input.z > 0)
         {
             shouldJump = true;
-        }
-
-        // Cancel horixontal input for on wall
-        int wallDirection = GetWallDirection();
-        // flip sprite on wall
-        if (wallDirection == -1)
-        {
-            if (input.x < 0.0f)
-                input.x = 0.0f;
-        }
-        else if (wallDirection == 1)
-        {
-            if (input.x > 0.0f)
-                input.x = 0.0f;
         }
 
         //Update state
@@ -142,9 +128,9 @@ public class PlayerController : MonoBehaviour
         // Apply new x and y velocities
         rb.velocity = new Vector2(xVelocity, yVelocity);
 
-        //Animator and sprite flip
+        //Animator horizontal movement
         animator.SetFloat("Speed", Mathf.Abs(rb.velocity.x));
-        // sr.flipX = rb.velocity.x < 0.0f;
+        // Flip sprite horizontal movement
         if (rb.velocity.x > 0.0f)
         {
             sr.flipX = false;
@@ -175,9 +161,24 @@ public class PlayerController : MonoBehaviour
     public void Jump()
     {
         // Jump physics
-        // rb.AddForce(new Vector2(0.0f, jump.y), ForceMode2D.Impulse);
         rb.velocity = new Vector2(rb.velocity.x * jump.x, jump.y);
-        SetXVelocity(rb.velocity.x * jump.x);
+        // SetXVelocity(rb.velocity.x * jump.x);
+        // Incremenet jump counter
+        currentJumps++;
+    }
+
+    public void WallJump()
+    {
+        // rb.velocity = GetWallDirection() ? new Vector2(-jump.y, jump.y) : new Vector2(jump.y, jump.y);
+        int wallDirection = GetWallDirection();
+        if (wallDirection == -1)
+        {
+            rb.velocity = new Vector2(jump.y, jump.y);
+        }
+        else if (wallDirection == 1)
+        {
+            rb.velocity = new Vector2(-jump.y, jump.y);
+        }
         // Incremenet jump counter
         currentJumps++;
     }
@@ -190,11 +191,44 @@ public class PlayerController : MonoBehaviour
         IncrementJumpDuration();
     }
 
+    public void WallJumpUpdate()
+    {
+        // Continue wall jump physics
+        int wallDirection = GetWallDirection();
+        if (wallDirection == -1)
+        {
+            // Jump off left wall using opposite of Jump vector (i.e. (xForce=jump.y, yForce=jump.y))
+            rb.AddForce(new Vector2(jump.y/2, jump.x/2), ForceMode2D.Impulse);
+        }
+        if (wallDirection == 1)
+        {
+            // Jump off right wall
+            rb.AddForce(new Vector2(-jump.y/2, jump.x), ForceMode2D.Impulse);
+        }
+        // Increment jump timer
+        IncrementJumpDuration();
+    }
+
     public void EndJump()
     {
         ResetJumpDuration();
         shouldJump = false;
         SetTargetYVelocity(0.0f);
+    }
+
+    public void CancelInputOnWall()
+    {
+        int wallDirection = GetWallDirection();
+        if (wallDirection == -1)
+        {
+            if (input.x < 0.0f)
+                input.x = 0.0f;
+        }
+        else if (wallDirection == 1)
+        {
+            if (input.x > 0.0f)
+                input.x = 0.0f;
+        }
     }
 
     public void IncrementJumpDuration()
@@ -254,12 +288,10 @@ public class PlayerController : MonoBehaviour
             }
             else if (shouldJump && currentJumps < maxJumps)
             {
-                // Jump();
                 SwitchState(new JumpingState(this));
             }
             else if (!PlayerIsOnGround())
             {
-                // currentJumps++;
                 SwitchState(new FallingState(this));
             }
         }
@@ -272,27 +304,23 @@ public class PlayerController : MonoBehaviour
             }
             else if (!PlayerIsOnGround())
             {
-                // currentJumps++;
                 SwitchState(new FallingState(this));
             }
             // Transition from Running to Jumping
             else if (shouldJump && currentJumps < maxJumps)
             {
                 SwitchState(new JumpingState(this));
-                // Jump();
             }
         }
         else if (currentState is FallingState)
         {
             // Transition from Falling
-            // Check Jump
             if (PlayerIsOnGround())
             {
                 SwitchState(new IdleState(this));
             }
             else if (shouldJump && currentJumps < maxJumps && hasDoubleJump)
             {
-                // Jump();
                 SwitchState(new JumpingState(this));
             }
             else if (PlayerIsOnWall() && hasWallCling)
@@ -308,9 +336,8 @@ public class PlayerController : MonoBehaviour
                 SwitchState(new IdleState(this));
             }
             // Transition from WallCling to WallJumping
-            else if (input.y > 0 || input.z > 0)
+            else if (shouldJump && currentJumps < maxJumps)
             {
-                WallJump();
                 SwitchState(new WallJumpingState(this));
             }
             else if (!PlayerIsOnWall())
@@ -321,7 +348,6 @@ public class PlayerController : MonoBehaviour
         else if (currentState is JumpingState)
         {
             // Transition from Jumping
-            Debug.Log($"Y input:{input.y}, Z input:{input.z}");
             if (jumpDuration > jumpDurationThreshold || (!Input.GetKey(controlDict["Move Up"]) && !Input.GetKey(controlDict["Jump"])))
             {
                 SwitchState(new FallingState(this));
@@ -333,17 +359,12 @@ public class PlayerController : MonoBehaviour
         }
         else if (currentState is WallJumpingState)
         {
-            // Transition from Jumping
-            if (rb.velocity.y < 0)
+            // Transition from Wall Jumping
+            if (jumpDuration > jumpDurationThreshold || (!Input.GetKey(controlDict["Move Up"]) && !Input.GetKey(controlDict["Jump"])))
             {
                 SwitchState(new FallingState(this));
             }
-            else if (shouldJump && hasDoubleJump)
-            {
-                // Jump();
-                SwitchState(new JumpingState(this));
-            }
-            else if (PlayerIsOnWall() && hasWallCling)
+            if (PlayerIsOnWall() && hasWallCling)
             {
                 SwitchState(new WallClingingState(this));
             }
@@ -406,14 +427,6 @@ public class PlayerController : MonoBehaviour
             default:
                 break;
         }
-    }
-
-    public void WallJump()
-    {
-        
-        rb.velocity = sr.flipX ? new Vector2(-jump.x, jump.y) : new Vector2(jump.x, jump.y);
-        // animator.SetBool("IsJumping", true);
-        currentJumps++;
     }
 
     private void OnDrawGizmos()
